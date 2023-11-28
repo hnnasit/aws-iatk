@@ -39,6 +39,23 @@ func (p *GetPhysicalIdParams) RPCMethod(metadata *jsonrpc.Metadata) (*types.Resu
 	}, err
 }
 
+func (p *PhysicalIdFromStackParams) NewRPCMethod() (*PhysicalIdFromStackOutput, error) {
+	cfg, err := config.GetAWSConfig(context.TODO(), p.GetRegion(), p.GetProfile(), nil)
+
+	if err != nil {
+		return nil, fmt.Errorf("error when loading AWS config: %v", err)
+	}
+
+	cfnClient := cloudformation.NewFromConfig(cfg)
+	id, err := iatkcfn.GetPhysicalId(p.GetStackName(), p.GetLogicalResourceId(), cfnClient)
+
+	// Fowards id and err to caller for handling
+	return &PhysicalIdFromStackOutput{
+		PhysicalId: &id,
+	}, err
+
+}
+
 func (p *GetPhysicalIdParams) ReflectOutput() reflect.Value {
 	ft := reflect.TypeOf(iatkcfn.GetPhysicalId)
 	out0 := ft.Out(0)

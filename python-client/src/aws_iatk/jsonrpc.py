@@ -4,7 +4,9 @@ import json
 import logging
 from platform import python_version
 from uuid import uuid4
+from typing import Any
 from typing import Optional
+from aws_iatk.iatk_pb2 import Request, RequestMetadata
 
 from aws_iatk.version import _version
 
@@ -47,3 +49,54 @@ class Payload:
 
     def dump_bytes(self, caller: Optional[str]=None):
         return bytes(json.dumps(self.to_dict(caller)), "utf-8")
+class PayloadPB:
+    jsonrpc: str = "2.0"
+    id: str
+    method: str
+    params: dict
+    _client: str = "python"
+    _version: str = _version
+    _client_version: str = python_version()
+
+    def __init__(self, method: str, params: Any, region: str = None, profile: str = None):
+        self.id = str(uuid4())
+        self.method = method
+        self.params = params
+        if region:
+            self.params.region = region
+        if profile:
+            self.params.profile = profile
+    
+    def create_request(self, caller: Optional[str]=None):
+        request = Request(
+            jsonrpc=self.jsonrpc,
+            id=self.id,
+            method=self.method,
+            params=self.params,
+            metadata=RequestMetadata(
+                client=self._client,
+                version=self._version,
+                caller=caller if caller else self.method,
+                client_version=self._client_version
+            )
+
+        )
+        return request
+
+    # def to_dict(self, caller: Optional[str]=None):
+    #     _dict = {
+    #         "jsonrpc": self.jsonrpc,
+    #         "id": self.id,
+    #         "method": self.method,
+    #         "params": self.params,
+    #         "metadata": {
+    #             "client": self._client,
+    #             "version": self._version,
+    #             "caller": caller if caller else self.method,
+    #             "client_version": self._client_version
+    #         }
+    #     }
+    #     return _dict
+
+    # def dump_bytes(self, caller: Optional[str]=None):
+    #     return bytes(json.dumps(self.to_dict(caller)), "utf-8")

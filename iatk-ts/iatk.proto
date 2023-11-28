@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package main;
+option go_package  = "/publicrpc";
+
+message PhysicalIdFromStackParams {
+  string logical_resource_id = 1;
+  string stack_name = 2;
+  string profile = 3;
+  string region = 4;
+}
+
+message Request {
+  string jsonrpc = 1;
+  string id = 2;
+  string method = 3;
+  PhysicalIdFromStackParams params = 4;
+  RequestMetadata metadata = 5;
+}
+
+message RequestMetadata {
+  string client = 1;
+  string version = 2;
+  string caller = 3;
+  string client_version = 4;
+}
+
+message Response {
+  string jsonrpc = 1;
+  string id = 2;
+  PhysicalIdFromStackOutput output = 3;
+}
+
+message PhysicalIdFromStackOutput {
+  string physical_id = 1;
+}

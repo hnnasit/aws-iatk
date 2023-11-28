@@ -11,10 +11,19 @@ from functools import wraps
 from typing import TYPE_CHECKING, Optional, Dict, List, Callable
 import time
 import math
+from uuid import uuid4
+
+from aws_iatk.version import _version
 
 from .get_physical_id_from_stack import (
     PhysicalIdFromStackOutput,
-    PhysicalIdFromStackParams,
+    # PhysicalIdFromStackParams,
+)
+from .iatk_pb2 import (
+    Request,
+    RequestMetadata,
+    Response,
+    PhysicalIdFromStackParams
 )
 from .get_stack_outputs import (
     GetStackOutputsOutput,
@@ -47,7 +56,7 @@ from .generate_mock_event import (
     GenerateMockEventOutput,
     GenerateMockEventParams,
 )
-from .jsonrpc import Payload
+from .jsonrpc import Payload, PayloadPB
 
 if TYPE_CHECKING:
     import boto3
@@ -137,10 +146,13 @@ class AwsIatk:
         IatkException
             When failed to fetch Physical Id
         """
-        params = PhysicalIdFromStackParams(logical_resource_id, stack_name)
-        payload = params.to_payload(self.region, self.profile)
-        response = self._invoke_iatk(payload)
-        output = PhysicalIdFromStackOutput(response)
+        params = PhysicalIdFromStackParams(logical_resource_id=logical_resource_id, stack_name=stack_name)
+        print(params)
+        payload = PayloadPB("get_physical_id", params, self.region, self.profile)
+        request = payload.create_request()
+        print(request)
+        response = self._invoke_iatk_new(request)
+        output = response.output #PhysicalIdFromStackOutput(response)
         LOG.debug(f"Physical id: {output.physical_id}, Logical id: {params.logical_resource_id}")
         return output
 
@@ -586,6 +598,13 @@ class AwsIatk:
             raise IatkException(message=message, error_code=error_code)
         
         return data_dict
+
+    @_log_duration
+    def _invoke_iatk_new(self, request: Request, caller: str=None) -> Response:
+        response = Response()
+        stdout_data = self._popen_iatk(request.SerializeToString())
+        response.ParseFromString(stdout_data)
+        return response
 
     def _popen_iatk(self, input: bytes, env_vars: Optional[dict]=None) -> bytes:
         LOG.debug("calling iatk rpc with input %s", input)
